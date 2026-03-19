@@ -1,7 +1,7 @@
 # Senteur AI
 
 > A data-driven niche perfume recommendation engine that helps you 
-> find your signature scent — without the blind buy risk.
+> find your signature scent.
 
 ## Overview
 
