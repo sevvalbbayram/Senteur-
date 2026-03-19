@@ -20,11 +20,15 @@ gap with data-driven recommendations.
 
 - **Find Similar Perfumes** — Select a perfume and get the top 3 
   most similar ones based on TF-IDF cosine similarity of descriptions
+  ![Find Similar Perfumes](interface/similar.png)
+
 - **Find by Notes** — Input one or more notes (e.g. "vanilla, 
   sandalwood") and get the best matches
+  ![Find by Notes](interface/notes.png)
 - **Find by Vibe** — Choose a mood (Clean Girl, Warm & Cozy, 
   Tropical, Romantic, Sexy & Bold, Fresh, Sweet & Yummy, Skin Scent, 
   Androgynous, Nutty) and get curated recommendations
+  ![Find by Vibe](interface/vibe.png)
 
 ## Dataset
 
