@@ -1,0 +1,68 @@
+---
+title: "repair_trat2"
+output: html_document
+date: "2025-05-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+library(tidyverse) 
+library(magrittr) 
+library(tinytex) 
+library(readxl) 
+library(skimr)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r}
+rp.time <- repair %>% group_by(team) %>% summarize(avgtime = mean(repair.time))
+rp.time
+```
+```{r}
+summary(repair)
+```
+
+
+```{r}
+
+set.seed(123)
+
+n_repeats <- 10000
+result <- numeric(n_repeats)
+
+for (i in 1:n_repeats) {
+  permuted_team <- sample(repair$team)
+  result[i] <- mean(repair$repair.time[permuted_team == "A"]) - 
+                   mean(repair$repair.time[permuted_team == "B"])
+}
+
+p_value <- mean(abs(result) >= abs(8.1))
+p_value
+```
+```{r}
+set.seed(123) 
+n <- length(teamB_times)
+rep.boot <- numeric(N)
+for (i in 1:N) {
+samp <- sample(teamB_times, size = n, replace = T) # draw resample
+rep.boot[i] <- mean(samp) # compute mean and store it as my.boo
+}
+paste("Bootstrap Mean =", round(mean(rep.boot),2))
+
+
+paste("Bootstrap SE =", round(sd(rep.boot),2))
+```
+
+

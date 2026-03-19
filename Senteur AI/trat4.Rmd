@@ -1,0 +1,95 @@
+---
+title: "attirtiontrat4"
+output: html_document
+date: "2025-05-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(staffattrition)
+```
+
+
+```{r pressure, echo=FALSE}
+staffattrition$OverTime <- as.factor(staffattrition$OverTime)
+staffattrition$MaritalStatus <- as.factor(staffattrition$MaritalStatus)
+staffattrition$Attrition <- as.factor(staffattrition$Attrition)
+staffattrition$JobSatisfaction <- as.factor(staffattrition$JobSatisfaction)
+```
+
+
+```{r}
+fit.lm <- glm(data = staffattrition, formula = Attrition ~ MonthlyIncome + JobSatisfaction, family = "binomial")
+summary(fit.lm)
+```
+```{r}
+library(tidyverse)
+library(magrittr) 
+library(kableExtra) 
+library(pROC) 
+library(caret) 
+library(sampling) 
+library(plotrix)
+st.pred <- staffattrition %>% mutate(attrition.actual = Attrition,
+                                     default.prob = round(fit.lm$fitted.values,4),
+                                     default.pred = ifelse(default.prob > 0.1, "Pred.Yes", "Pred.No")
+                                      )
+nrow(st.pred[st.pred$Attrition == "Yes" & st.pred$default.pred == "Pred.Yes", ])
+
+actual <- as.factor(st.pred$attrition.actual) %>% relevel(ref = "Yes") 
+predicted <- as.factor(st.pred$default.pred) %>% relevel(ref = "Pred.Yes")
+
+confmat <- table(actual, predicted) %>% addmargins() 
+confmat
+```
+```{r}
+213/237
+```
+
+```{r}
+pred <- data.frame(MonthlyIncome = 5000, JobSatisfaction = "Very_High")
+predicted_log_at <- predict(fit.lm, newdata = pred, type = "response")
+predicted_log_at
+```
+```{r}
+library(tidyverse)
+library(magrittr)
+library(tinytex)
+library(car)
+library(pROC)
+library(e1071)
+library(StatMatch)
+library(randomForest)
+library(ranger)
+library(xgboost)
+library(ada)
+library(kernlab)
+library(caret)
+library(gbm)
+library(readxl)
+library(glmnet)
+library(VGAM)
+library(Metrics)
+library(janitor)
+library(broom)
+library(stats)
+library(tidyverse) 
+library(broom)
+library(skimr)
+library(tinytex)
+library(caret)
+library(pROC)
+library(tableone)
+library(AppliedPredictiveModeling) 
+library(vip)
+```
+

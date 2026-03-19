@@ -1,0 +1,9 @@
+*_embeddings.csv
+perfumes_table.csv
+vanilla_perfumes_sorted_by_rating.csv
+perfume_subset.csv
+perfume_proj/
+*.RData
+*.rds
+.DS_Store
+.Rproj.user/

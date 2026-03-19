@@ -1,0 +1,12 @@
+name: SenteurAI
+title: SenteurAI
+username: sevval
+account: sevval
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 14473618
+bundleId: 10136873
+url: https://sevval.shinyapps.io/SenteurAI/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

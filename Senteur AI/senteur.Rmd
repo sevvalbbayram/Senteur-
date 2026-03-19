@@ -1,0 +1,361 @@
+---
+title: "Senteur AI - Application"
+output: html_document
+date: "2025-04-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+library(tidyverse)
+library(slam)
+library(Matrix)
+library(tidytext)
+library(tm)
+library(text2vec)
+library(sentimentr)
+library(proxy) 
+library(cluster)
+
+library(shiny)
+library(shinythemes)
+library(janitor)
+library(htmlwidgets)
+library(stringi)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r}
+library(readr)
+#final_perfume_data <- read_csv("final_perfume_data.csv")
+
+clean_perfume_data <- function(input_path, output_path) {
+  
+
+  data <- read_csv(input_path, col_types = cols()) %>%
+    mutate(across(where(is.character), ~ stri_encode(., "", "UTF-8"))) %>%
+    mutate(across(where(is.character), str_trim)) %>%
+    janitor::clean_names() %>%
+    drop_na(name, brand, description) %>%
+    mutate(notes = replace_na(notes, "Unknown")) %>%
+    distinct()
+
+  write_csv(data, output_path)
+}
+
+#clean_perfume_data("final_perfume_data.csv", "clean_perfume_data.csv")
+
+ui <- fluidPage(
+  theme = shinytheme("cyborg"),
+  tags$head(
+    tags$style(HTML("
+      @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+      body, label, input, button, select, .tabbable .nav-tabs > li > a {
+        font-family: 'Poppins', sans-serif;
+        color: #eaeaea;
+        background-color: #1a1a1a;
+      }
+
+      .tabbable .nav-tabs {
+        justify-content: center;
+        background-color: transparent;
+      }
+
+      .tabbable .nav-tabs > li > a {
+        color: #eaeaea;
+        background-color: transparent;
+        border: none;
+        font-weight: 600;
+        padding: 15px;
+      }
+
+      .tabbable .nav-tabs > li.active > a, 
+      .tabbable .nav-tabs > li > a:hover {
+        color: #fff;
+        background: linear-gradient(135deg, #6a4f3b, #d1b99d);
+        border-radius: 8px;
+      }
+
+      .perfume-card {
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        background: linear-gradient(145deg, #2b2b2b, #1b1b1b);
+        box-shadow: 5px 5px 20px rgba(0, 0, 0, 0.8);
+        display: flex;
+        color: #eaeaea;
+      }
+
+      .perfume-image-container {
+        flex: 0 0 150px;
+        padding-right: 20px;
+      }
+
+      .perfume-image {
+        max-height: 150px;
+        max-width: 100%;
+        object-fit: contain;
+        border-radius: 8px;
+      }
+
+      .perfume-info {
+        flex: 1;
+      }
+
+      .perfume-name {
+        font-size: 1.6em;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #d1b99d;
+      }
+
+      .perfume-brand {
+        font-style: italic;
+        margin-bottom: 8px;
+        color: #cccccc;
+      }
+
+      .perfume-notes {
+        color: #bdbdbd;
+      }
+
+      .btn, .action-button {
+        background-color: #a98467 !important;
+        border-color: #a98467 !important;
+        color: #111111 !important;
+        font-weight: bold;
+        border-radius: 8px;
+      }
+
+      .btn:hover {
+        background-color: #c19f80 !important;
+        border-color: #c19f80 !important;
+        color: #000000 !important;
+      }
+
+      .app-title {
+        text-align: center;
+        font-size: 3em;
+        color: #d1b99d;
+        font-weight: 600;
+        margin-top: 30px;
+        margin-bottom: 20px;
+      }
+    "))
+  ),
+  div(class = "app-title", "Senteur AI"),
+  tabsetPanel(
+    type = "tabs",
+    tabPanel("Find Similar Perfumes",
+             sidebarLayout(
+               sidebarPanel(
+                 selectInput("perfume_select", "Select a perfume:", choices = NULL),
+                 actionButton("find_similar", "Find Similar Perfumes"),
+                 width = 3
+               ),
+               mainPanel(
+                 h3("Top 3 Most Similar Perfumes"),
+                 uiOutput("similar_perfumes"),
+                 width = 9
+               )
+             )
+    ),
+    tabPanel("Find by Notes",
+             sidebarLayout(
+               sidebarPanel(
+                 textInput("note_input", "Enter fragrance notes:", 
+                           placeholder = "e.g., vanilla, jasmine"),
+                 actionButton("find_by_notes", "Find Best Matches"),
+                 width = 3
+               ),
+               mainPanel(
+                 h3("Top 3 Recommended Perfumes"),
+                 uiOutput("note_recommendations"),
+                 width = 9
+               )
+             )
+    ),
+    tabPanel("Find by Vibe",
+             sidebarLayout(
+               sidebarPanel(
+                 selectInput("vibe_input", "Select a vibe:", 
+                             choices = c("Clean Girl", "Warm & Cozy", "Tropical", 
+                                         "Romantic", "Sexy & Bold", 
+                                         "Fresh", "Sweet & Yummy", "Skin Scent", "Androgynous", "Nutty")),
+                 actionButton("find_by_vibe", "Find Perfumes"),
+                 width = 3
+               ),
+               mainPanel(
+                 h3("Recommended Perfumes"),
+                 uiOutput("vibe_recommendations"),
+                 width = 9
+               )
+             )
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  perfume_data <- reactive({
+    data <- read_csv("clean_perfume_data.csv") 
+    required_cols <- c("name", "brand", "description", "notes", "image_url")
+    if (!all(required_cols %in% colnames(data))) {
+      stop("Dataset must contain: ", paste(required_cols, collapse = ", "))
+    }
+    return(data)
+  })
+
+  observe({
+    updateSelectInput(session, "perfume_select", 
+                      choices = unique(perfume_data()$name))
+  })
+
+  get_similar_perfumes <- function(input_name, data) {
+    target_row <- data %>% filter(name == input_name)
+    if (nrow(target_row) == 0) return(data.frame())
+
+    target_notes <- target_row$notes
+    all_notes <- c(target_notes, data$notes)
+    tokens <- strsplit(tolower(all_notes), "[ ,]+")
+    it <- itoken(tokens)
+    vocab <- create_vocabulary(it)
+    vectorizer <- vocab_vectorizer(vocab)
+    dtm <- create_dtm(it, vectorizer)
+    sim_scores <- as.numeric(sim2(dtm[-1, ], dtm[1, , drop = FALSE]))
+
+    data %>%
+      mutate(Similarity = round(sim_scores, 3)) %>%
+      filter(name != input_name) %>%
+      arrange(desc(Similarity)) %>%
+      head(3)
+  }
+
+  get_top_perfumes_for_notes <- function(input_notes, data) {
+    if (input_notes == "") return(data.frame())
+
+    all_notes <- c(input_notes, data$notes)
+    tokens <- strsplit(tolower(all_notes), "[ ,]+")
+    it <- itoken(tokens)
+    vocab <- create_vocabulary(it)
+    vectorizer <- vocab_vectorizer(vocab)
+    dtm <- create_dtm(it, vectorizer)
+    sim_scores <- as.numeric(sim2(dtm[-1, ], dtm[1, , drop = FALSE]))
+
+    data %>%
+      mutate(Similarity = round(sim_scores, 3)) %>%
+      arrange(desc(Similarity)) %>%
+      head(3)
+  }
+
+  perfume_data_with_vibes <- reactive({
+    perfume_data() %>%
+      mutate(vibe = case_when(
+        str_detect(tolower(notes), "musk|aldehydes|cotton|ambrette") ~ "Clean Girl",
+        str_detect(tolower(notes), "vanilla|amber|tonka bean|cedarwood") ~ "Warm & Cozy",
+        str_detect(tolower(notes), "coconut|pineapple|tropical|franigpani|tiara flower") ~ "Tropical",
+        str_detect(tolower(notes), "jasmine|ylang ylang|rose|peony|gardenia|tuberose") ~ "Romantic",
+        str_detect(tolower(notes), "spices|cinnamon|pepper|leather|cherry|frankinsence") ~ "Sexy & Bold",
+        str_detect(tolower(notes), "citrus|grapefruit|bergamot|lemon|orange blossom|neroli") ~ "Fresh",
+        str_detect(tolower(notes), "strawberry|chocolate|honey|praline|milk|sugar|caramel|balsam|vanilla") ~ "Sweet & Yummy",
+        str_detect(tolower(notes), "white musk|ambrette|iso e super|benzoin|cashmeran") ~ "Skin Scent",
+        str_detect(tolower(notes), "vetiver|basil|iris|patchouli|sandalwood|myrrh|lavender") ~ "Androgynous",
+        str_detect(tolower(notes), "pistachio|cardamom|nutmeg|almond|tonka bean") ~ "Nutty",
+        TRUE ~ "Other"
+      ))
+  })
+
+  get_perfumes_by_vibe <- function(vibe, data) {
+    data %>%
+      filter(vibe == !!vibe) %>%
+      sample_n(min(n(), 3))
+  }
+
+  output$similar_perfumes <- renderUI({
+    req(input$find_similar)
+    perfume <- get_similar_perfumes(input$perfume_select, perfume_data())
+    if (nrow(perfume) == 0) return(h4("No similar perfumes found"))
+    tagList(
+      lapply(1:nrow(perfume), function(i) {
+        div(class = "perfume-card",
+            div(class = "perfume-image-container",
+                img(src = perfume$image_url[i], class = "perfume-image", 
+                    alt = perfume$name[i], onerror = "this.style.display='none'")),
+            div(class = "perfume-info",
+                div(class = "perfume-name", perfume$name[i]),
+                div(class = "perfume-brand", perfume$brand[i]),
+                p(perfume$description[i]),
+                div(class = "perfume-notes",
+                    p(strong("Notes: "), perfume$notes[i]),
+                    p(strong("Similarity: "), round(perfume$Similarity[i], 2))
+                )
+            )
+        )
+      })
+    )
+  })
+
+  output$note_recommendations <- renderUI({
+    req(input$find_by_notes)
+    perfume <- get_top_perfumes_for_notes(input$note_input, perfume_data())
+    if (nrow(perfume) == 0) return(h4("No perfumes found matching these notes"))
+    tagList(
+      lapply(1:nrow(perfume), function(i) {
+        div(class = "perfume-card",
+            div(class = "perfume-image-container",
+                img(src = perfume$image_url[i], class = "perfume-image", 
+                    alt = perfume$name[i], onerror = "this.style.display='none'")),
+            div(class = "perfume-info",
+                div(class = "perfume-name", perfume$name[i]),
+                div(class = "perfume-brand", perfume$brand[i]),
+                p(perfume$description[i]),
+                div(class = "perfume-notes",
+                    p(strong("Notes: "), perfume$notes[i]),
+                    p(strong("Similarity: "), round(perfume$Similarity[i], 2))
+                )
+            )
+        )
+      })
+    )
+  })
+
+  output$vibe_recommendations <- renderUI({
+    req(input$find_by_vibe)
+    perfumes <- get_perfumes_by_vibe(input$vibe_input, perfume_data_with_vibes())
+    if (nrow(perfumes) == 0) return(h4("No perfumes found for this vibe"))
+    tagList(
+      lapply(1:nrow(perfumes), function(i) {
+        div(class = "perfume-card",
+            div(class = "perfume-image-container",
+                img(src = perfumes$image_url[i], class = "perfume-image", 
+                    alt = perfumes$name[i], onerror = "this.style.display='none'")),
+            div(class = "perfume-info",
+                div(class = "perfume-name", perfumes$name[i]),
+                div(class = "perfume-brand", perfumes$brand[i]),
+                p(perfumes$description[i]),
+                div(class = "perfume-notes",
+                    p(strong("Notes: "), perfumes$notes[i])
+                )
+            )
+        )
+      })
+    )
+  })
+}
+
+shinyApp(ui, server)
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
